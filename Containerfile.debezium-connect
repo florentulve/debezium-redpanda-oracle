@@ -1,0 +1,11 @@
+ARG DEBEZIUM_VERSION
+ARG OJDBC_VERSION
+
+FROM quay.io/debezium/connect:$DEBEZIUM_VERSION
+
+# Fetch and deploy PostgreSQL JDBC driver
+WORKDIR /kafka/connect/debezium-connector-oracle
+RUN curl -sO https://repo1.maven.org/maven2/com/oracle/database/jdbc/ojdbc11/21.6.0.0.1/ojdbc11-21.6.0.0.1.jar
+
+WORKDIR /kafka
+

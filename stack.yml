@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: cdc
+  name: cdc
+spec:
+  containers:
+  - name: redpanda-console
+    image: docker.redpanda.com/vectorized/console:master-173596f
+    ports:
+      - containerPort: 8080
+        hostPort: 8080
+        protocol: TCP
+    env:
+    - name: KAFKA_BROKERS
+      value: localhost:9092
+  - name: redpanda
+    image: localhost/vectorized/redpanda:v$REDPANDA_VERSION
+    ports:
+      - containerPort: 9092
+        hostPort: 9092
+        protocol: TCP
+      - containerPort: 29092
+        hostPort: 29092
+        protocol: TCP
+    args: ["redpanda","start","--overprovisioned","--smp","1","--memory","1G","--reserve-memory","0M","--kafka-addr","PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092","--advertise-kafka-addr","PLAINTEXT://127.0.0.1:29092,OUTSIDE://127.0.0.1:9092","--check=false"]
+    volumeMounts:
+      - mountPath: /var/lib/redpanda/data
+        name: redpanda-data
+  - image: localhost/oracle:$ORACLE_DATABASE_VERSION
+    name: oracle
+    hostname: redpanda
+    env:
+    - name: ORACLE_SID
+      value: ORASID
+    - name: ORACLE_PDB
+      value: ORAPDB
+    - name: ORACLE_PWD
+      value: Zero!123
+    - name: ORACLE_EDITION
+      value: se2
+    - name: ORACLE_CHARACTERSET
+      value: AL32UTF8
+    - name: ENABLE_ARCHIVELOG
+      value: true
+    - name: INIT_SGA_SIZE
+      value: 2048
+    - name: INIT_PGA_SIZE
+      value: 2048
+    ports:
+    - containerPort: 1521
+      hostPort: 1521
+      protocol: TCP
+    - containerPort: 5500
+      hostPort: 5500
+      protocol: TCP
+    volumeMounts:
+    - mountPath: /opt/oracle/oradata
+      name: oradata
+  - image: localhost/debezium/debezium-ui:$DEBEZIUM_VERSION
+    name: dbz-ui
+    ports:
+      - containerPort: 8090
+        hostPort: 8090
+    env:
+      - name: KAFKA_CONNECT_URIS
+        value: http://localhost:8083
+  - image: localhost/debezium/connect-with-jdbc:$DEBEZIUM_VERSION
+    name: connect
+    ports:
+      - containerPort: 8083
+        hostPort: 8083
+    env:
+      - name: BOOTSTRAP_SERVERS
+        value: 127.0.0.1:9092
+      - name: GROUP_ID
+        value: 1
+      - name: CONFIG_STORAGE_TOPIC
+        value: dbz.configs
+      - name: OFFSET_STORAGE_TOPIC
+        value: dbz.offset
+      - name: STATUS_STORAGE_TOPIC
+        value: dbz.status
+      - name: CONNECT_TOPIC_CREATION_ENABLE
+        value: true
+      - name: JAVA_OPTS
+        value: -Xmx4G
+      - name: KAFKA_HEAP_OPTS
+        value: -Xmx4G
+  volumes:
+  - name: oradata
+    persistentVolumeClaim:
+      claimName: oradata
+  - name: redpanda-data
+    persistentVolumeClaim:
+      claimName: redpanda-data

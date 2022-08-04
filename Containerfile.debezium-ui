@@ -1,0 +1,9 @@
+ARG DEBEZIUM_VERSION
+
+FROM quay.io/debezium/debezium-ui:$DEBEZIUM_VERSION
+
+
+ENV JAVA_OPTIONS="$JAVA_OPTIONS -Dquarkus.http.port=8090"
+
+EXPOSE 8090
+

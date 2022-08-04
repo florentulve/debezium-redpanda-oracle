@@ -1,0 +1,5 @@
+ARG REDPANDA_VERSION
+
+FROM docker.redpanda.com/vectorized/redpanda:v$REDPANDA_VERSION
+
+RUN rpk config set redpanda.auto_create_topics_enabled true
